@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 
 // Onboarding State
 class OnboardingState {
@@ -32,11 +32,11 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
   // Check if onboarding has been completed
   Future<void> _checkOnboardingStatus() async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final isCompleted = prefs.getBool('onboarding_completed') ?? false;
-      
+
       state = state.copyWith(
         isCompleted: isCompleted,
         isLoading: false,
@@ -49,11 +49,11 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
   // Mark onboarding as completed
   Future<void> completeOnboarding() async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('onboarding_completed', true);
-      
+
       state = state.copyWith(
         isCompleted: true,
         isLoading: false,
@@ -66,11 +66,11 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
   // Reset onboarding (for testing or if user wants to see it again)
   Future<void> resetOnboarding() async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('onboarding_completed');
-      
+
       state = state.copyWith(
         isCompleted: false,
         isLoading: false,
@@ -82,7 +82,8 @@ class OnboardingNotifier extends StateNotifier<OnboardingState> {
 }
 
 // Provider
-final onboardingProvider = StateNotifierProvider<OnboardingNotifier, OnboardingState>((ref) {
+final onboardingProvider =
+    StateNotifierProvider<OnboardingNotifier, OnboardingState>((ref) {
   return OnboardingNotifier();
 });
 

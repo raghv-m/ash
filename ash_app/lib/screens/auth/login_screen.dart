@@ -57,22 +57,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   Future<void> _signInWithGoogle() async {
-    final authNotifier = ref.read(authProvider.notifier);
-    final success = await authNotifier.signInWithGoogle();
-    
-    if (success && mounted) {
-      AppRouter.pushAndRemoveUntil(context, AppRouter.home);
+    try {
+      final authNotifier = ref.read(authProvider.notifier);
+      final success = await authNotifier.signInWithGoogle();
+
+      if (success && mounted) {
+        AppRouter.pushAndRemoveUntil(context, AppRouter.home);
+      } else if (mounted) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign-in failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
+    final authAsyncValue = ref.watch(authProvider);
     final theme = Theme.of(context);
+
+    // Extract isLoading from AsyncValue
+    final isLoading = authAsyncValue.when(
+      data: (state) => state.isLoading,
+      loading: () => true,
+      error: (_, __) => false,
+    );
 
     return Scaffold(
       body: LoadingOverlay(
-        isLoading: authState.isLoading,
+        isLoading: isLoading,
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -90,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               child: Column(
                 children: [
                   const Spacer(),
-                  
+
                   // Logo and Welcome Section
                   AnimatedBuilder(
                     animation: _animationController,
@@ -123,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 ),
                               ),
                               const SizedBox(height: 32),
-                              
+
                               // Welcome Text
                               Text(
                                 'Welcome to ASH',
@@ -133,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              
+
                               Text(
                                 'Your AI Scheduling Helper',
                                 style: theme.textTheme.titleLarge?.copyWith(
@@ -141,7 +167,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              
+
                               Text(
                                 'I manage your calendar so you don\'t have to',
                                 style: theme.textTheme.bodyLarge?.copyWith(
@@ -155,9 +181,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       );
                     },
                   ),
-                  
+
                   const SizedBox(height: 60),
-                  
+
                   // Features List
                   AnimatedBuilder(
                     animation: _animationController,
@@ -171,19 +197,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               _buildFeatureItem(
                                 icon: Icons.voice_chat,
                                 title: 'Voice Commands',
-                                description: 'Schedule meetings with natural speech',
+                                description:
+                                    'Schedule meetings with natural speech',
                               ),
                               const SizedBox(height: 16),
                               _buildFeatureItem(
                                 icon: Icons.smart_toy,
                                 title: 'AI Assistant',
-                                description: 'Intelligent scheduling and reminders',
+                                description:
+                                    'Intelligent scheduling and reminders',
                               ),
                               const SizedBox(height: 16),
                               _buildFeatureItem(
                                 icon: Icons.calendar_today,
                                 title: 'Calendar Sync',
-                                description: 'Seamless Google Calendar integration',
+                                description:
+                                    'Seamless Google Calendar integration',
                               ),
                             ],
                           ),
@@ -191,9 +220,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       );
                     },
                   ),
-                  
+
                   const Spacer(),
-                  
+
                   // Sign In Button
                   AnimatedBuilder(
                     animation: _animationController,
@@ -208,10 +237,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 onPressed: _signInWithGoogle,
                                 text: 'Continue with Google',
                                 icon: Icons.login,
-                                isLoading: authState.isLoading,
+                                isLoading: isLoading,
                               ),
                               const SizedBox(height: 16),
-                              
                               Text(
                                 'By continuing, you agree to our Terms of Service and Privacy Policy',
                                 style: theme.textTheme.bodySmall?.copyWith(
@@ -225,7 +253,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       );
                     },
                   ),
-                  
+
                   const SizedBox(height: 32),
                 ],
               ),
@@ -264,15 +292,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
               Text(
                 description,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.8),
-                ),
+                      color: Colors.white.withOpacity(0.8),
+                    ),
               ),
             ],
           ),
@@ -281,4 +309,3 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     );
   }
 }
-

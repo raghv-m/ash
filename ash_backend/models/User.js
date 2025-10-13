@@ -141,3 +141,4 @@ userSchema.statics.findActiveUsers = function() {
 
 module.exports = mongoose.model('User', userSchema);
 
+

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -76,7 +77,7 @@ class EventsNotifier extends StateNotifier<EventsState> {
         final responseData = jsonDecode(response.body);
         final eventsData = responseData['events'] as List<dynamic>;
         final events = eventsData.map((e) => Event.fromJson(e)).toList();
-        
+
         state = state.copyWith(
           events: events,
           isLoading: false,
@@ -120,7 +121,7 @@ class EventsNotifier extends StateNotifier<EventsState> {
         final responseData = jsonDecode(response.body);
         final eventsData = responseData['events'] as List<dynamic>;
         final events = eventsData.map((e) => Event.fromJson(e)).toList();
-        
+
         state = state.copyWith(
           events: events,
           isLoading: false,
@@ -164,7 +165,7 @@ class EventsNotifier extends StateNotifier<EventsState> {
         final responseData = jsonDecode(response.body);
         final eventsData = responseData['events'] as List<dynamic>;
         final events = eventsData.map((e) => Event.fromJson(e)).toList();
-        
+
         state = state.copyWith(
           events: events,
           isLoading: false,
@@ -201,7 +202,8 @@ class EventsNotifier extends StateNotifier<EventsState> {
         '/schedule',
         token: token,
         data: {
-          'text': 'Schedule a meeting titled "$title" from ${startTime.toIso8601String()} to ${endTime.toIso8601String()}'
+          'text':
+              'Schedule a meeting titled "$title" from ${startTime.toIso8601String()} to ${endTime.toIso8601String()}'
                   '${location != null ? ' at $location' : ''}'
                   '${description.isNotEmpty ? '. Description: $description' : ''}',
         },
@@ -236,10 +238,12 @@ class EventsNotifier extends StateNotifier<EventsState> {
       final updateData = <String, dynamic>{};
       if (title != null) updateData['title'] = title;
       if (description != null) updateData['description'] = description;
-      if (startTime != null) updateData['startTime'] = startTime.toIso8601String();
+      if (startTime != null)
+        updateData['startTime'] = startTime.toIso8601String();
       if (endTime != null) updateData['endTime'] = endTime.toIso8601String();
       if (location != null) updateData['location'] = location;
-      if (attendees != null) updateData['attendees'] = attendees.map((a) => a.toJson()).toList();
+      if (attendees != null)
+        updateData['attendees'] = attendees.map((a) => a.toJson()).toList();
 
       final response = await _apiService.put(
         '/events/$eventId',
@@ -274,7 +278,8 @@ class EventsNotifier extends StateNotifier<EventsState> {
 
       if (response.statusCode == 200) {
         // Remove from local state
-        final updatedEvents = state.events.where((e) => e.id != eventId).toList();
+        final updatedEvents =
+            state.events.where((e) => e.id != eventId).toList();
         state = state.copyWith(events: updatedEvents);
         return true;
       }
@@ -303,7 +308,8 @@ final apiServiceProvider = Provider<ApiService>((ref) {
   return ApiService();
 });
 
-final eventsProvider = StateNotifierProvider<EventsNotifier, EventsState>((ref) {
+final eventsProvider =
+    StateNotifierProvider<EventsNotifier, EventsState>((ref) {
   final apiService = ref.watch(apiServiceProvider);
   return EventsNotifier(apiService);
 });
@@ -312,12 +318,7 @@ final eventsProvider = StateNotifierProvider<EventsNotifier, EventsState>((ref) 
 final upcomingEventsProvider = FutureProvider<List<Event>>((ref) async {
   final authState = ref.watch(authProvider);
   final eventsNotifier = ref.read(eventsProvider.notifier);
-  
-  if (authState.token != null) {
-    await eventsNotifier.loadUpcomingEvents(token: authState.token);
-    return ref.read(eventsProvider).events;
-  }
-  
+  final token = ref.watch(authTokenProvider);
   return [];
 });
 
@@ -328,4 +329,3 @@ final eventsLoadingProvider = Provider<bool>((ref) {
 final eventsErrorProvider = Provider<String?>((ref) {
   return ref.watch(eventsProvider).error;
 });
-

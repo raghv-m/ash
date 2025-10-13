@@ -205,3 +205,4 @@ logSchema.methods.markAsError = function(errorMessage) {
 
 module.exports = mongoose.model('Log', logSchema);
 
+

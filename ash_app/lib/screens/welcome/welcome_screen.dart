@@ -80,8 +80,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       if (mounted) {
         final authState = ref.read(authProvider);
         final onboardingState = ref.read(onboardingProvider);
-        
-        if (authState.isAuthenticated) {
+        final isAuthenticated = ref.watch(isAuthenticatedProvider);
+        if (isAuthenticated) {
           AppRouter.pushAndRemoveUntil(context, AppRouter.home);
         } else if (onboardingState.isCompleted) {
           AppRouter.pushAndRemoveUntil(context, AppRouter.login);
@@ -106,7 +106,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       backgroundColor: Colors.black,
       body: Center(
         child: AnimatedBuilder(
-          animation: Listenable.merge([_fadeAnimation, _scaleAnimation, _glowAnimation]),
+          animation: Listenable.merge(
+              [_fadeAnimation, _scaleAnimation, _glowAnimation]),
           builder: (context, child) {
             return FadeTransition(
               opacity: _fadeAnimation,
@@ -123,12 +124,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.3 * _glowAnimation.value),
+                            color: Colors.white
+                                .withOpacity(0.3 * _glowAnimation.value),
                             blurRadius: 30 * _glowAnimation.value,
                             spreadRadius: 10 * _glowAnimation.value,
                           ),
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.1 * _glowAnimation.value),
+                            color: Colors.white
+                                .withOpacity(0.1 * _glowAnimation.value),
                             blurRadius: 60 * _glowAnimation.value,
                             spreadRadius: 20 * _glowAnimation.value,
                           ),
@@ -159,17 +162,19 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     // App Name with Glow
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.2 * _glowAnimation.value),
+                            color: Colors.white
+                                .withOpacity(0.2 * _glowAnimation.value),
                             blurRadius: 20 * _glowAnimation.value,
                             spreadRadius: 5 * _glowAnimation.value,
                           ),
@@ -185,9 +190,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Loading indicator
                     Container(
                       width: 30,
@@ -199,9 +204,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                         strokeWidth: 2,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Loading text
                     Text(
                       'Initializing ASH...',

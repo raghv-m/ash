@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "417533035171",
+    "project_id": "ash-ai-cdfee",
+    "storage_bucket": "ash-ai-cdfee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:417533035171:android:007937dfdcfe9ec8757516",
+        "android_client_info": {
+          "package_name": "com.example.ash_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "417533035171-hq2rt5ltnd2rnpa0j1mo8f1ifh7pkhhn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjSGpyzJEzglO154sD04a85ZRRM8TzDXU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "417533035171-hq2rt5ltnd2rnpa0j1mo8f1ifh7pkhhn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

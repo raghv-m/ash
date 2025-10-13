@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -70,7 +71,8 @@ class ChatMessage {
       id: json['id'] ?? '',
       role: json['role'] ?? '',
       content: json['content'] ?? '',
-      timestamp: DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),
+      timestamp:
+          DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),
       isVoice: json['isVoice'] ?? false,
       audioUrl: json['audioUrl'],
       isStreaming: json['isStreaming'] ?? false,
@@ -156,18 +158,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
       "Hi! I'm ASH. Ready to help you schedule and manage your meetings efficiently.",
       "Welcome back! I'm ASH, your scheduling companion. What can I help you with today?"
     ];
-    
+
     final welcomeMessage = welcomeMessages[
-      DateTime.now().millisecondsSinceEpoch % welcomeMessages.length
-    ];
-    
+        DateTime.now().millisecondsSinceEpoch % welcomeMessages.length];
+
     final message = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       role: 'assistant',
       content: welcomeMessage,
       timestamp: DateTime.now(),
     );
-    
+
     state = state.copyWith(messages: [message]);
   }
 
@@ -210,12 +211,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         // Add assistant response
         final assistantMessage = ChatMessage(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           role: 'assistant',
-          content: data['reply'] ?? 'I apologize, but I couldn\'t process your request.',
+          content: data['reply'] ??
+              'I apologize, but I couldn\'t process your request.',
           timestamp: DateTime.now(),
           sessionId: sessionId,
         );
@@ -310,12 +312,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         // Add assistant response
         final assistantMessage = ChatMessage(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           role: 'assistant',
-          content: data['reply'] ?? 'I apologize, but I couldn\'t process your request.',
+          content: data['reply'] ??
+              'I apologize, but I couldn\'t process your request.',
           timestamp: DateTime.now(),
           sessionId: sessionId,
           audioUrl: data['audioUrl'],
@@ -405,13 +408,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final chats = data['chats'] as List<dynamic>;
-        
+
         if (chats.isNotEmpty) {
           final latestChat = chats.first;
           final messages = (latestChat['messages'] as List<dynamic>)
               .map((msg) => ChatMessage.fromJson(msg))
               .toList();
-          
+
           state = state.copyWith(
             messages: messages,
             currentSessionId: latestChat['sessionId'],

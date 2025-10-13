@@ -212,3 +212,4 @@ chatSchema.statics.getConversationStats = function(userId, days = 7) {
 };
 
 module.exports = mongoose.model('Chat', chatSchema);
+

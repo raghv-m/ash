@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
@@ -37,7 +38,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
       final prefs = await SharedPreferences.getInstance();
       final themeIndex = prefs.getInt(AppConfig.themeKey) ?? 0;
       final themeMode = ThemeMode.values[themeIndex];
-      
+
       state = state.copyWith(
         themeMode: themeMode,
         isDarkMode: themeMode == ThemeMode.dark,
@@ -53,7 +54,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(AppConfig.themeKey, mode.index);
-      
+
       state = state.copyWith(
         themeMode: mode,
         isDarkMode: mode == ThemeMode.dark,
@@ -99,4 +100,3 @@ final currentThemeModeProvider = Provider<ThemeMode>((ref) {
 final isDarkModeProvider = Provider<bool>((ref) {
   return ref.watch(themeProvider).isDarkMode;
 });
-

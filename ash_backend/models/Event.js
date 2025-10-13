@@ -218,3 +218,4 @@ eventSchema.statics.findNeedingReminders = function() {
 
 module.exports = mongoose.model('Event', eventSchema);
 
+

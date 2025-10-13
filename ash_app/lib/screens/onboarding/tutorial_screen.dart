@@ -394,3 +394,4 @@ class TutorialStep {
     required this.tips,
   });
 }
+

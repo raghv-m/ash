@@ -1,13 +1,14 @@
+import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-
 import '../config/app_config.dart';
-import '../services/api_service.dart';
 import '../models/user_model.dart';
+import '../services/api_service.dart';
 
-// Auth State
+/// Auth state model
 class AuthState {
   final User? user;
   final String? token;
@@ -34,42 +35,66 @@ class AuthState {
       user: user ?? this.user,
       token: token ?? this.token,
       isLoading: isLoading ?? this.isLoading,
-      error: error,
+      error: error ?? this.error,
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
     );
   }
 }
 
-// Auth Notifier
+/// Initialize GoogleSignIn - this happens once at startup
+final googleSignInProvider = FutureProvider<GoogleSignIn>((ref) async {
+  final googleSignIn = GoogleSignIn.instance;
+  await googleSignIn.initialize(
+      serverClientId:
+          '417533035171-hq2rt5ltnd2rnpa0j1mo8f1ifh7pkhhn.apps.googleusercontent.com');
+  return googleSignIn;
+});
+
+final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
+
+/// Auth notifier using Riverpod StateNotifier
 class AuthNotifier extends StateNotifier<AuthState> {
   final GoogleSignIn _googleSignIn;
   final ApiService _apiService;
 
-  AuthNotifier(this._googleSignIn, this._apiService) : super(const AuthState()) {
+  AuthNotifier(this._googleSignIn, this._apiService)
+      : super(const AuthState()) {
     _checkAuthStatus();
   }
 
-  // Check if user is already authenticated
+  // Check auth status on init
   Future<void> _checkAuthStatus() async {
     state = state.copyWith(isLoading: true);
-    
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(AppConfig.userTokenKey);
       final userData = prefs.getString(AppConfig.userDataKey);
-      
+
       if (token != null && userData != null) {
         final user = User.fromJson(jsonDecode(userData));
-        state = state.copyWith(
-          user: user,
+        final response = await _apiService.get(
+          '${AppConfig.authEndpoint}/profile',
           token: token,
-          isAuthenticated: true,
-          isLoading: false,
         );
+
+        if (response.statusCode == 200) {
+          state = state.copyWith(
+            user: user,
+            token: token,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          );
+        } else {
+          await _clearLocalStorage();
+          state = state.copyWith(isLoading: false, error: null);
+        }
       } else {
-        state = state.copyWith(isLoading: false);
+        state = state.copyWith(isLoading: false, error: null);
       }
-    } catch (e) {
+    } catch (e, st) {
+      developer.log('Error checking auth status: $e\n$st',
+          name: 'AuthNotifier');
       state = state.copyWith(
         error: 'Failed to check authentication status',
         isLoading: false,
@@ -77,29 +102,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  // Sign in with Google
+  // Sign in with Google - v7.x uses authenticate()
   Future<bool> signInWithGoogle() async {
     state = state.copyWith(isLoading: true, error: null);
-    
     try {
-      // Sign in with Google
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
-      if (googleUser == null) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Google sign in was cancelled',
-        );
-        return false;
-      }
+      // Use authenticate() instead of signIn()
+      final googleUser = await _googleSignIn.authenticate(
+        scopeHint: [
+          'email',
+          'profile',
+          'https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/gmail.send',
+        ],
+      );
 
-      // Get authentication details
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
-      if (googleAuth.accessToken == null) {
+      // In v7, authentication is now synchronous (no await needed)
+      final googleAuth = googleUser.authentication;
+      if (googleAuth.idToken == null) {
         state = state.copyWith(
           isLoading: false,
-          error: 'Failed to get Google access token',
+          error: 'Failed to retrieve Google ID token',
         );
         return false;
       }
@@ -107,32 +129,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Send token to backend for verification
       final response = await _apiService.post(
         '${AppConfig.authEndpoint}/google/callback',
-        data: {
-          'code': googleAuth.accessToken,
-          'state': googleUser.id,
-        },
+        data: {'id_token': googleAuth.idToken},
       );
 
       if (response.statusCode == 200) {
-        // Extract token from response (assuming backend returns JWT)
-        final responseData = jsonDecode(response.body);
-        final token = responseData['token'] ?? responseData['access_token'];
-        
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        final token = data['token'] ?? data['access_token'];
+
         if (token != null) {
-          // Get user profile
-          final userResponse = await _apiService.get(
+          final profile = await _apiService.get(
             '${AppConfig.authEndpoint}/profile',
             token: token,
           );
-          
-          if (userResponse.statusCode == 200) {
-            final user = User.fromJson(jsonDecode(userResponse.body));
-            
-            // Store authentication data
+
+          if (profile.statusCode == 200) {
+            final user = User.fromJson(jsonDecode(profile.body));
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString(AppConfig.userTokenKey, token);
-            await prefs.setString(AppConfig.userDataKey, jsonEncode(user.toJson()));
-            
+            await prefs.setString(
+                AppConfig.userDataKey, jsonEncode(user.toJson()));
+
             state = state.copyWith(
               user: user,
               token: token,
@@ -140,150 +156,157 @@ class AuthNotifier extends StateNotifier<AuthState> {
               isLoading: false,
               error: null,
             );
-            
             return true;
+          } else {
+            state = state.copyWith(
+              isLoading: false,
+              error: 'Failed to fetch user profile from backend',
+            );
+            return false;
           }
         }
       }
-      
+
       state = state.copyWith(
         isLoading: false,
-        error: 'Failed to authenticate with backend',
+        error: 'Backend authentication failed',
       );
       return false;
-      
-    } catch (e) {
+    } on GoogleSignInException catch (e) {
+      developer.log(
+          'Google sign-in exception: ${e.code.name} - ${e.description}',
+          name: 'AuthNotifier');
       state = state.copyWith(
         isLoading: false,
-        error: 'Sign in failed: ${e.toString()}',
+        error: _getErrorMessage(e),
       );
+      return false;
+    } catch (e, st) {
+      developer.log('Google sign-in error: $e\n$st', name: 'AuthNotifier');
+      state = state.copyWith(isLoading: false, error: 'Sign-in failed: $e');
       return false;
     }
   }
 
-  // Sign out
+  // Convert GoogleSignInException to user-friendly message
+  String _getErrorMessage(GoogleSignInException e) {
+    switch (e.code.name) {
+      case 'canceled':
+        return 'Sign-in was cancelled';
+      case 'interrupted':
+        return 'Sign-in was interrupted';
+      case 'clientConfigurationError':
+        return 'Configuration issue with Google Sign-In';
+      case 'providerConfigurationError':
+        return 'Google Sign-In is currently unavailable';
+      default:
+        return 'Sign-in failed: ${e.description ?? 'Unknown error'}';
+    }
+  }
+
+  // Sign-out
   Future<void> signOut() async {
-    state = state.copyWith(isLoading: true);
-    
+    state = state.copyWith(isLoading: true, error: null);
     try {
-      // Sign out from Google
       await _googleSignIn.signOut();
-      
-      // Clear local storage
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(AppConfig.userTokenKey);
-      await prefs.remove(AppConfig.userDataKey);
-      
-      // Call backend logout endpoint
       if (state.token != null) {
+        // optional: notify backend
         try {
-          await _apiService.post(
-            '${AppConfig.authEndpoint}/logout',
-            token: state.token,
-          );
-        } catch (e) {
-          // Ignore backend logout errors
-          // Backend logout failed: $e
+          await _apiService.post('${AppConfig.authEndpoint}/logout',
+              token: state.token);
+        } catch (_) {
+          // ignore backend logout failures
         }
       }
-      
+      await _clearLocalStorage();
       state = const AuthState();
-      
-    } catch (e) {
-      state = state.copyWith(
-        error: 'Sign out failed: ${e.toString()}',
-        isLoading: false,
-      );
+    } catch (e, st) {
+      developer.log('Sign-out error: $e\n$st', name: 'AuthNotifier');
+      state = state.copyWith(isLoading: false, error: 'Sign-out failed: $e');
     }
   }
 
-  // Refresh user data
-  Future<void> refreshUser() async {
-    if (state.token == null) return;
-    
-    try {
-      final response = await _apiService.get(
-        '${AppConfig.authEndpoint}/profile',
-        token: state.token,
-      );
-      
-      if (response.statusCode == 200) {
-        final user = User.fromJson(jsonDecode(response.body));
-        
-        // Update local storage
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(AppConfig.userDataKey, jsonEncode(user.toJson()));
-        
-        state = state.copyWith(user: user);
-      }
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to refresh user data');
-    }
-  }
-
-  // Update user preferences
-  Future<void> updatePreferences(Map<String, dynamic> preferences) async {
-    if (state.token == null) return;
-    
-    try {
-      final response = await _apiService.put(
-        '${AppConfig.authEndpoint}/preferences',
-        data: preferences,
-        token: state.token,
-      );
-      
-      if (response.statusCode == 200) {
-        // Refresh user data
-        await refreshUser();
-      }
-    } catch (e) {
-      state = state.copyWith(error: 'Failed to update preferences');
-    }
-  }
-
-  // Clear error
-  void clearError() {
-    state = state.copyWith(error: null);
+  Future<void> _clearLocalStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(AppConfig.userTokenKey);
+    await prefs.remove(AppConfig.userDataKey);
   }
 }
 
-// Providers
-final googleSignInProvider = Provider<GoogleSignIn>((ref) {
-  return GoogleSignIn(
-    clientId: AppConfig.googleClientId,
-    scopes: [
-      'email',
-      'profile',
-      'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/gmail.send',
-    ],
-  );
+final authTokenProvider = Provider<String?>((ref) {
+  return ref.watch(authProvider).when(
+        data: (state) => state.token,
+        loading: () => null,
+        error: (_, __) => null,
+      );
 });
 
-final apiServiceProvider = Provider<ApiService>((ref) {
-  return ApiService();
+/// Main auth provider - use AsyncNotifierProvider to handle initialization
+final authProvider = AsyncNotifierProvider<AuthNotifierAsync, AuthState>(() {
+  return AuthNotifierAsync();
 });
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  final googleSignIn = ref.watch(googleSignInProvider);
-  final apiService = ref.watch(apiServiceProvider);
-  return AuthNotifier(googleSignIn, apiService);
-});
+/// Async notifier wrapper to handle GoogleSignIn initialization
+class AuthNotifierAsync extends AsyncNotifier<AuthState> {
+  AuthNotifier? _authNotifier;
 
-// Convenience providers
+  @override
+  Future<AuthState> build() async {
+    // Wait for GoogleSignIn to initialize
+    final googleSignIn = await ref.watch(googleSignInProvider.future);
+    final apiService = ref.watch(apiServiceProvider);
+
+    // Create the AuthNotifier
+    _authNotifier = AuthNotifier(googleSignIn, apiService);
+
+    // Listen to state changes and update
+    _authNotifier!.addListener((state) {
+      this.state = AsyncValue.data(state);
+    });
+
+    return _authNotifier!.state;
+  }
+
+  Future<bool> signInWithGoogle() async {
+    if (_authNotifier == null) return false;
+    return await _authNotifier!.signInWithGoogle();
+  }
+
+  Future<void> signOut() async {
+    if (_authNotifier == null) return;
+    await _authNotifier!.signOut();
+  }
+}
+
+// Helper providers for easy access
 final userProvider = Provider<User?>((ref) {
-  return ref.watch(authProvider).user;
+  return ref.watch(authProvider).when(
+        data: (state) => state.user,
+        loading: () => null,
+        error: (_, __) => null,
+      );
 });
 
 final isAuthenticatedProvider = Provider<bool>((ref) {
-  return ref.watch(authProvider).isAuthenticated;
+  return ref.watch(authProvider).when(
+        data: (state) => state.isAuthenticated,
+        loading: () => false,
+        error: (_, __) => false,
+      );
 });
 
 final authLoadingProvider = Provider<bool>((ref) {
-  return ref.watch(authProvider).isLoading;
+  return ref.watch(authProvider).when(
+        data: (state) => state.isLoading,
+        loading: () => true,
+        error: (_, __) => false,
+      );
 });
 
 final authErrorProvider = Provider<String?>((ref) {
-  return ref.watch(authProvider).error;
+  return ref.watch(authProvider).when(
+        data: (state) => state.error,
+        loading: () => null,
+        error: (error, _) => error.toString(),
+      );
 });
-
