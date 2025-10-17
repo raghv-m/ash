@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../screens/splash_screen.dart';
-import '../../screens/welcome/welcome_screen.dart';
 import '../../screens/onboarding/onboarding_screen.dart';
 import '../../screens/onboarding/tutorial_screen.dart';
 import '../../screens/auth/login_screen.dart';
@@ -19,6 +18,7 @@ class AppRouter {
   static const String chat = '/chat';
   static const String calendar = '/calendar';
   static const String settings = '/settings';
+  static const String email = '/email';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -27,55 +27,55 @@ class AppRouter {
           builder: (_) => const SplashScreen(),
           settings: settings,
         );
-      
-      case welcome:
-        return MaterialPageRoute(
-          builder: (_) => const WelcomeScreen(),
-          settings: settings,
-        );
-      
+
+      // case welcome:
+      //   return MaterialPageRoute(
+      //     builder: (_) => const WelcomeScreen(),
+      //     settings: settings,
+      //   );
+
       case onboarding:
         return MaterialPageRoute(
           builder: (_) => const OnboardingScreen(),
           settings: settings,
         );
-      
+
       case tutorial:
         return MaterialPageRoute(
           builder: (_) => const TutorialScreen(),
           settings: settings,
         );
-      
+
       case login:
         return MaterialPageRoute(
           builder: (_) => const LoginScreen(),
           settings: settings,
         );
-      
+
       case home:
         return MaterialPageRoute(
           builder: (_) => const HomeScreen(),
           settings: settings,
         );
-      
+
       case chat:
         return MaterialPageRoute(
           builder: (_) => const ChatScreen(),
           settings: settings,
         );
-      
+
       case calendar:
         return MaterialPageRoute(
           builder: (_) => const CalendarScreen(),
           settings: settings,
         );
-      
+
       case AppRouter.settings:
         return MaterialPageRoute(
           builder: (_) => const SettingsScreen(),
           settings: settings,
         );
-      
+
       default:
         return MaterialPageRoute(
           builder: (_) => const SplashScreen(),
@@ -84,15 +84,18 @@ class AppRouter {
     }
   }
 
-  static void pushNamed(BuildContext context, String routeName, {Object? arguments}) {
+  static void pushNamed(BuildContext context, String routeName,
+      {Object? arguments}) {
     Navigator.pushNamed(context, routeName, arguments: arguments);
   }
 
-  static void pushReplacementNamed(BuildContext context, String routeName, {Object? arguments}) {
+  static void pushReplacementNamed(BuildContext context, String routeName,
+      {Object? arguments}) {
     Navigator.pushReplacementNamed(context, routeName, arguments: arguments);
   }
 
-  static void pushAndRemoveUntil(BuildContext context, String routeName, {Object? arguments}) {
+  static void pushAndRemoveUntil(BuildContext context, String routeName,
+      {Object? arguments}) {
     Navigator.pushNamedAndRemoveUntil(
       context,
       routeName,
@@ -109,4 +112,3 @@ class AppRouter {
     Navigator.popUntil(context, ModalRoute.withName(routeName));
   }
 }
-

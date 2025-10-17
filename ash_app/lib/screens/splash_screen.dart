@@ -52,10 +52,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _checkAuthAndNavigate() async {
     // Wait for auth state to be determined
     await Future.delayed(const Duration(milliseconds: 2500));
-    
+
     if (mounted) {
       // Always go to welcome screen first for the glowing logo effect
-      AppRouter.pushAndRemoveUntil(context, AppRouter.welcome);
+      AppRouter.pushAndRemoveUntil(context, AppRouter.login);
     }
   }
 
@@ -105,25 +105,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
+
                         // App Name
                         Text(
                           AppConfig.appName,
-                          style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .displayMedium
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                              ),
                         ),
                         const SizedBox(height: 8),
-                        
+
                         // App Description
                         Text(
                           AppConfig.appDescription,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.9),
-                            letterSpacing: 1,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.white.withOpacity(0.9),
+                                    letterSpacing: 1,
+                                  ),
                         ),
                       ],
                     ),
@@ -131,9 +135,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 );
               },
             ),
-            
+
             const SizedBox(height: 80),
-            
+
             // Loading Indicator
             AnimatedBuilder(
               animation: _fadeAnimation,
@@ -150,8 +154,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       Text(
                         'Initializing ASH...',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withOpacity(0.8),
-                        ),
+                              color: Colors.white.withOpacity(0.8),
+                            ),
                       ),
                     ],
                   ),
@@ -164,4 +168,3 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
   }
 }
-

@@ -18,6 +18,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _displayNameController = TextEditingController();
+  bool _isSignUp = false;
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
@@ -53,6 +58,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   void dispose() {
     _animationController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _displayNameController.dispose();
     super.dispose();
   }
 
@@ -64,10 +72,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       if (success && mounted) {
         AppRouter.pushAndRemoveUntil(context, AppRouter.home);
       } else if (mounted) {
-        // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sign-in failed. Please try again.'),
+          SnackBar(
+            content: Text(ref.read(authErrorProvider) ??
+                'Sign-in failed. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -84,12 +92,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     }
   }
 
+  Future<void> _handleEmailAuth() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      final authNotifier = ref.read(authProvider.notifier);
+      bool success;
+
+      if (_isSignUp) {
+        success = await authNotifier.signUpWithEmail(
+          _emailController.text.trim(),
+          _passwordController.text.trim(),
+          _displayNameController.text.trim(),
+        );
+      } else {
+        success = await authNotifier.loginWithEmail(
+          _emailController.text.trim(),
+          _passwordController.text.trim(),
+        );
+      }
+
+      if (success && mounted) {
+        AppRouter.pushAndRemoveUntil(context, AppRouter.home);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(authErrorProvider) ??
+                'Authentication failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _toggleAuthMode() {
+    setState(() {
+      _isSignUp = !_isSignUp;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final authAsyncValue = ref.watch(authProvider);
     final theme = Theme.of(context);
 
-    // Extract isLoading from AsyncValue
     final isLoading = authAsyncValue.when(
       data: (state) => state.isLoading,
       loading: () => true,
@@ -111,12 +167,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
           ),
           child: SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  const Spacer(),
-
                   // Logo and Welcome Section
                   AnimatedBuilder(
                     animation: _animationController,
@@ -127,7 +181,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           position: _slideAnimation,
                           child: Column(
                             children: [
-                              // ASH Logo
                               Container(
                                 width: 100,
                                 height: 100,
@@ -149,8 +202,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 ),
                               ),
                               const SizedBox(height: 32),
-
-                              // Welcome Text
                               Text(
                                 'Welcome to ASH',
                                 style: theme.textTheme.displaySmall?.copyWith(
@@ -159,7 +210,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 ),
                               ),
                               const SizedBox(height: 16),
-
                               Text(
                                 'Your AI Scheduling Helper',
                                 style: theme.textTheme.titleLarge?.copyWith(
@@ -167,7 +217,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 ),
                               ),
                               const SizedBox(height: 8),
-
                               Text(
                                 'I manage your calendar so you don\'t have to',
                                 style: theme.textTheme.bodyLarge?.copyWith(
@@ -182,7 +231,113 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     },
                   ),
 
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 32),
+
+                  // Email Form
+                  AnimatedBuilder(
+                    animation: _animationController,
+                    builder: (context, child) {
+                      return FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              children: [
+                                if (_isSignUp)
+                                  TextFormField(
+                                    controller: _displayNameController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Display Name',
+                                      filled: true,
+                                      fillColor: Colors.white.withOpacity(0.9),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter your name';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                if (_isSignUp) const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _emailController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Email',
+                                    filled: true,
+                                    fillColor: Colors.white.withOpacity(0.9),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your email';
+                                    }
+                                    if (!RegExp(
+                                            r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                        .hasMatch(value)) {
+                                      return 'Please enter a valid email';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                TextFormField(
+                                  controller: _passwordController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Password',
+                                    filled: true,
+                                    fillColor: Colors.white.withOpacity(0.9),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  obscureText: true,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your password';
+                                    }
+                                    if (value.length < 6) {
+                                      return 'Password must be at least 6 characters';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                CustomButton(
+                                  onPressed: _handleEmailAuth,
+                                  text: _isSignUp ? 'Sign Up' : 'Log In',
+                                  icon: _isSignUp
+                                      ? Icons.person_add
+                                      : Icons.login,
+                                  isLoading: isLoading,
+                                ),
+                                TextButton(
+                                  onPressed: _toggleAuthMode,
+                                  child: Text(
+                                    _isSignUp
+                                        ? 'Already have an account? Log In'
+                                        : 'Need an account? Sign Up',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 32),
 
                   // Features List
                   AnimatedBuilder(
@@ -221,9 +376,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     },
                   ),
 
-                  const Spacer(),
+                  const SizedBox(height: 32),
 
-                  // Sign In Button
+                  // Google Sign In Button
                   AnimatedBuilder(
                     animation: _animationController,
                     builder: (context, child) {

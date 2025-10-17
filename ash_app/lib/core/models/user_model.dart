@@ -30,10 +30,14 @@ class User {
       timeZone: json['timeZone'] ?? 'UTC',
       preferences: UserPreferences.fromJson(json['preferences'] ?? {}),
       hasValidGoogleTokens: json['hasValidGoogleTokens'] ?? false,
-      lastLogin: DateTime.parse(json['lastLogin'] ?? DateTime.now().toIso8601String()),
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      lastLogin:
+          DateTime.parse(json['lastLogin'] ?? DateTime.now().toIso8601String()),
+      createdAt:
+          DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
     );
   }
+
+  Object? get uid => null;
 
   Map<String, dynamic> toJson() {
     return {
@@ -95,7 +99,8 @@ class UserPreferences {
       ttsProvider: json['ttsProvider'] ?? 'openai',
       reminderMinutes: json['reminderMinutes'] ?? 30,
       workingHours: WorkingHours.fromJson(json['workingHours'] ?? {}),
-      workingDays: List<String>.from(json['workingDays'] ?? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']),
+      workingDays: List<String>.from(json['workingDays'] ??
+          ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']),
     );
   }
 
@@ -159,5 +164,3 @@ class WorkingHours {
     );
   }
 }
-
-
